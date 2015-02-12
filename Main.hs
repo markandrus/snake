@@ -8,9 +8,10 @@
 {-#LANGUAGE TypeFamilies #-}
 
 module Snake
-  ( GameIO
+  ( GameF(..)
+  , Game(..)
   , GameT(..)
-  , GameF(..)
+  , GameIO
   , Direction(..)
   , GameState
   , Snake
@@ -18,10 +19,11 @@ module Snake
   ) where
 
 import Control.Applicative ((<$>))
-import Control.Monad (join, void)
 import Control.Comonad (Comonad(..))
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar, tryTakeMVar)
+import Control.Monad (join, void)
+import Control.Monad.Trans.Free (FreeF(..), FreeT(..), free, runFree)
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Bifunctor (Bifunctor(..))
 import Data.Bifunctor.Flip (Flip(..))
@@ -140,6 +142,11 @@ instance Functor Game where
     where
       f' (DeadF a) = DeadF $ f a
       f' (MoveF d a game) = MoveF d (f a) (getGame . fmap f $ Game game)
+
+newtype GameMT m a = GameMT { getGameMT :: FreeT (GameF a) m a }
+  deriving (Generic)
+
+type GameM a = GameMT Identity a
 
 makeGetDirection :: IO (IO (Maybe Direction))
 makeGetDirection = do
